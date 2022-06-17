@@ -20,6 +20,8 @@ export class SocketConnection {
     } else {
       const result = this.ws.subscribe(channel);
 
+      console.log(this.ws)
+
       result.on('message', message => {
         console.log('Incoming', message);
         messageHandler(message)
