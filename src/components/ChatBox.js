@@ -20,8 +20,10 @@ const ChatBox = () => {
       if(isArray(question)) {
         question.forEach(q => {
           dispatch(appendMessage(`bot: ${q.question}`))
-          if(question.type !== 'not-a-question') {
-            setCurrentQuestion(question)
+          if(question.type === 'not-a-question') {
+            setCurrentQuestion(null)
+          } else {
+            setCurrentQuestion(q)
           }
           if(q.choices && q.choices.length > 0) {
             choices = q.choices.reduce((choices, current) => {
@@ -34,7 +36,9 @@ const ChatBox = () => {
         })
       } else {
         dispatch(appendMessage(`bot: ${question.question}`))
-        if(question.type !== 'not-a-question') {
+        if(question.type === 'not-a-question') {
+          setCurrentQuestion(null)  
+        } else {
           setCurrentQuestion(question)
         }
         if(question.choices && question.choices.length > 0) {
@@ -72,6 +76,7 @@ const ChatBox = () => {
   const sendMessage = (message) => {
     if(currentQuestion) {
       //we answer if there is a current question...
+      console.log({currentQuestion})
       subscription.emit('answer', {question_id: currentQuestion.id, answer: message, user})
       setCurrentQuestion(null)
       setCurrentMessage('')
