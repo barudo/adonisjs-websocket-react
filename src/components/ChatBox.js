@@ -1,10 +1,10 @@
-import {useEffect, useState} from 'react'
+import {useState} from 'react'
 import Messages from './Messages';
-//import socket from '../utils/socket';
+import SocketConnection from '../utils/socket';
 import {isArray, trimEnd} from 'lodash'
 import { useSelector, useDispatch } from 'react-redux'
 import { appendMessage } from '../redux/reducers/messageSlice'
-import { setSubscription } from '../redux/reducers/socketSlice';
+import { setSocket, setSubscription } from '../redux/reducers/socketSlice';
 
 const ChatBox = () => {
   const {messages} = useSelector((store) => store?.messages || [])
@@ -13,7 +13,8 @@ const ChatBox = () => {
   const [currentQuestion, setCurrentQuestion] = useState(null)
   const dispatch = useDispatch()
   const {socket, subscription} = useSelector((store) => store?.socket)
-  
+
+  //receive question from server...
   const handleQuestion = (question) => {
     console.log({question})
     let choices
@@ -51,7 +52,7 @@ const ChatBox = () => {
       }
     }
   }
-  
+  // receive message from server
   const handleMessage = (message) => {
     if(user === message.user) {
       dispatch(appendMessage(`me: ${message.message}`))
@@ -59,24 +60,11 @@ const ChatBox = () => {
       dispatch(appendMessage(`${message.user}: ${message.message}`))
     }
   }
-  /*
-  useEffect(() => {
-    
-    console.log({subscription})
-    if(!subscription) {
-      
-    }
-    return (() => {
-      setSubscription(null)
-    })
-  }, [socket, subscription, currentQuestion, dispatch, user])
-  */
-
+  // send to server
   const createTaskClick = () => {
-    console.log({subscription})
     subscription.emit('createTask')
   }
-
+  //send to server
   const sendMessage = (message) => {
     if(currentQuestion) {
       //we answer if there is a current question...
@@ -96,17 +84,26 @@ const ChatBox = () => {
     }
   }
   const [jwtToken, setJwtToken] = useState('')
-  const handleSubscription = () => {
-    dispatch(setSubscription(socket.subscribe('chat:abscbd', handleMessage, handleQuestion)))
+
+  const handleConnect = () => {
+    dispatch(setSocket(SocketConnection.connect(jwtToken)))
   }
+
+  const handleSubscription = () => {
+    dispatch(setSubscription(socket.subscribe(topic, handleMessage, handleQuestion)))
+  }
+
+  const [topic, setTopic] = useState('chat:abscbd')
 
   return (
     <>
       <div style={{marginBot: '30px'}}>
         <input type="text" onChange={(e) => setJwtToken(e.target.value)} value={jwtToken} placeholder="jwt token"/>
+        <button onClick={() => handleConnect()}>Connect</button>
       </div>
       <div>
-        <button onClick={() => handleSubscription()} >Subscribe</button>
+        <input type="text" onChange={(e) => setTopic(e.target.value)} value={topic} placeholder="chat:xx-abcd" />
+        <button onClick={() => handleSubscription()} >Connect to Topic</button>
       </div>
       <Messages messages={messages}/>
       <button onClick={() => createTaskClick()}>Create Task</button><br />

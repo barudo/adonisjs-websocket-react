@@ -1,13 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit'
-import socket from '../../utils/socket'
-
-/**
- * @description - Reducer for Tenant's stages
- */
 
 const initialState = {
   //just random user for now
-  socket: socket.connect(),
+  socket: null,
   subscription: null
 }
 

@@ -1,7 +1,9 @@
 import Ws from '@adonisjs/websocket-client';
 export class SocketConnection {
-  connect () {
+  connect (token) {
+    this.token = token
     this.ws = Ws('ws://localhost:3000/')
+      .withJwtToken(token)
       .connect();
 
     this.ws.on('open', () => {
@@ -16,14 +18,11 @@ export class SocketConnection {
 
   subscribe (channel, messageHandler, questionHandler) {
     if (!this.ws) {
-      setTimeout(() => this.subscribe(channel), 1000)
+      console.log('You need to connect first before you subscribe.')
     } else {
-      const result = this.ws.subscribe(channel);
-
-      console.log(this.ws)
-
+      const result = this.ws.withJwtToken(this.token).subscribe(channel);
+      
       result.on('message', message => {
-        console.log('Incoming', message);
         messageHandler(message)
       });
 
