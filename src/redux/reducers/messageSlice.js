@@ -5,7 +5,7 @@ import { createSlice } from '@reduxjs/toolkit'
  */
 
 const initialState = {
-  messages: [],
+  messages: {},
 }
 
 const sliceConfig = createSlice({
@@ -13,7 +13,11 @@ const sliceConfig = createSlice({
   initialState,
   reducers: {
     appendMessage(state, { payload }) {
-      state.messages = [...state.messages, payload]
+      if(state.messages[payload.topic]) {
+        state.messages[payload.topic] = [...state.messages[payload.topic], payload.message]
+      } else {
+        state.messages = {...state.messages, [payload.topic]: [payload.message]}
+      }
     },
   },
 })

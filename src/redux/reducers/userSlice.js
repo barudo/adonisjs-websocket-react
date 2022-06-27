@@ -7,6 +7,7 @@ import { createSlice } from '@reduxjs/toolkit'
 const initialState = {
   //just random user for now
   user: Math.random().toString(36).slice(2, 7),
+  jwtToken: ''
 }
 
 const sliceConfig = createSlice({
@@ -16,6 +17,9 @@ const sliceConfig = createSlice({
     setUser(state, { payload }) {
       state.user = payload
     },
+    setToken(state, (payload)) {
+      state.jwtToken = payload
+    }
   },
 })
 

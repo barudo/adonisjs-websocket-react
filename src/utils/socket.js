@@ -31,7 +31,7 @@ export class SocketConnection {
       })
 
       result.on('error', (error) => {
-        console.error(error)
+        console.error('errr', {error})
       });
 
       return result
