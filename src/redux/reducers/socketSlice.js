@@ -4,7 +4,8 @@ const initialState = {
   //just random user for now
   socket: null,
   subscriptions: {},
-  topics: []
+  topics: [],
+  activeTopic: null,
 }
 
 const sliceConfig = createSlice({
@@ -14,12 +15,15 @@ const sliceConfig = createSlice({
     setSocket(state, { payload }) {
       state.socket = payload
     },
-    addSubscription(state, {payload}) {
-      state.subscriptions = {...state.subscriptions, [payload.topic]: payload.subscription}
+    addSubscription(state, { payload }) {
+      state.subscriptions = { ...state.subscriptions, [payload.topic]: payload.subscription }
       state.topics = [...state.topics, payload.topic]
-    }
+    },
+    setActiveTopic(state, { payload }) {
+      state.activeTopic = payload
+    },
   },
 })
 
-export const { setSocket, addSubscription } = sliceConfig.actions
+export const { setSocket, addSubscription, setActiveTopic } = sliceConfig.actions
 export default sliceConfig.reducer

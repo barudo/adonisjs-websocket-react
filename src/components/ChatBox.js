@@ -1,115 +1,63 @@
-import {useState} from 'react'
-import Messages from './Messages';
-import SocketConnection from '../utils/socket';
-import {isArray, trimEnd} from 'lodash'
-import { useSelector, useDispatch } from 'react-redux'
-import { appendMessage } from '../redux/reducers/messageSlice'
-import { setSocket, setSubscription } from '../redux/reducers/socketSlice';
+import { useEffect, useState } from 'react'
+import { Container, Row, Col, Card, InputGroup, FormControl, Button } from 'react-bootstrap'
+import { useSelector } from 'react-redux'
 
-const ChatBox = () => {
-  const {messages} = useSelector((store) => store?.messages || [])
-  const {user} = useSelector((store) => store?.user)
-  const [currentMessage, setCurrentMessage] = useState('')
-  const [currentQuestion, setCurrentQuestion] = useState(null)
-  const dispatch = useDispatch()
-  const {socket, subscription} = useSelector((store) => store?.socket)
+const ChatBox = ({ activeTopic }) => {
+  const { messages } = useSelector((store) => store?.messages)
+  const { subscriptions } = useSelector((store) => store?.socket)
+  const [topicMessages, setTopicMessages] = useState([])
+  const [subscription, setSubscription] = useState({})
 
-  //receive question from server...
-  const handleQuestion = (question) => {
-    console.log({question})
-    let choices
-    if(isArray(question)) {
-      question.forEach(q => {
-        dispatch(appendMessage(`bot: ${q.question}`))
-        if(question.type === 'not-a-question' || question.type === 'final') {
-          setCurrentQuestion(false)
-        } else {
-          setCurrentQuestion(q)
-        }
-        if(q.choices && q.choices.length > 0) {
-          choices = q.choices.reduce((choices, current) => {
-            choices += `${current.choice},`
-            return choices
-          }, '')
-          choices = trimEnd(choices, ',')
-          dispatch(appendMessage(`choices: ${choices}`))
-        }
-      })
-    } else {
-      dispatch(appendMessage(`bot: ${question.question}`))
-      if(question.type === 'not-a-question' || question.type === 'final') {
-        setCurrentQuestion(false)  
-      } else {
-        setCurrentQuestion(question)
-      }
-      if(question.choices && question.choices.length > 0) {
-        choices = question.choices.reduce((choices, current) => {
-          choices += `${current.choice},`
-          return choices
-        }, '')
-        choices = trimEnd(choices, ',')
-        dispatch(appendMessage(`choices: ${choices}`))
-      }
-    }
-  }
-  // receive message from server
-  const handleMessage = (message) => {
-    if(user === message.user) {
-      dispatch(appendMessage(`me: ${message.message}`))
-    } else {
-      dispatch(appendMessage(`${message.user}: ${message.message}`))
-    }
-  }
-  // send to server
-  const createTaskClick = () => {
-    subscription.emit('createTask')
-  }
-  //send to server
+  useEffect(() => {
+    setTopicMessages(messages[activeTopic])
+    setSubscription(subscriptions[activeTopic])
+  }, [activeTopic, messages, setTopicMessages, setSubscription, subscriptions])
+
   const sendMessage = (message) => {
-    if(currentQuestion) {
+    console.log(subscription)
+    subscription.emit('message', { message, user: 'Justin' })
+    /*
+    if (currentQuestion) {
       //we answer if there is a current question...
-      console.log({currentQuestion})
-      subscription.emit('answer', {question_id: currentQuestion.id, answer: message, user})
+      console.log({ currentQuestion })
+      
       setCurrentQuestion(false)
       setCurrentMessage('')
     } else {
-      subscription.emit('message', {message, user})
+      subscription.emit('message', { message, user })
       setCurrentMessage('')
-    }
+    }*/
   }
-
+  /*
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' && currentMessage) {
       sendMessage(currentMessage)
     }
-  }
-  const [jwtToken, setJwtToken] = useState('')
-
-  const handleConnect = () => {
-    dispatch(setSocket(SocketConnection.connect(jwtToken)))
-  }
-
-  const handleSubscription = () => {
-    dispatch(setSubscription(socket.subscribe(topic, handleMessage, handleQuestion)))
-  }
-
-  const [topic, setTopic] = useState('chat:abscbd')
+  }*/
 
   return (
-    <>
-      <div style={{marginBot: '30px'}}>
-        <input type="text" onChange={(e) => setJwtToken(e.target.value)} value={jwtToken} placeholder="jwt token"/>
-        <button onClick={() => handleConnect()}>Connect</button>
-      </div>
-      <div>
-        <input type="text" onChange={(e) => setTopic(e.target.value)} value={topic} placeholder="chat:xx-abcd" />
-        <button onClick={() => handleSubscription()} >Connect to Topic</button>
-      </div>
-      <Messages messages={messages}/>
-      <button onClick={() => createTaskClick()}>Create Task</button><br />
-      <input type="text" value={currentMessage} onChange={(event) => setCurrentMessage(event.target.value)} onKeyDown={handleKeyDown}/>  <br />
-      <button onClick={() => sendMessage(currentMessage)}>Send Message</button>
-    </>
+    <Container>
+      <Row className="justify-content-md-center">
+        <Col md="6">
+          <Card>
+            <Card.Header>Topic: {activeTopic}</Card.Header>
+            <Card.Body style={{ height: '400px' }} className="d-flex align-items-end">
+              {topicMessages.map((message, index) => (
+                <div key={index}>{message}</div>
+              ))}
+            </Card.Body>
+            <Card.Footer>
+              <InputGroup className="mb-3">
+                <FormControl placeholder="Message" aria-label="message" />
+                <Button variant="success" onClick={sendMessage}>
+                  Send
+                </Button>
+              </InputGroup>
+            </Card.Footer>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   )
 }
 

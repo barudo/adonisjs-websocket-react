@@ -3,6 +3,7 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit'
 import messageReducer from './reducers/messageSlice'
 import userReducer from './reducers/userSlice'
 import socketReducer from './reducers/socketSlice'
+import errorReducer from './reducers/errorSlice'
 
 const middleware = [thunk]
 
@@ -10,7 +11,8 @@ const store = configureStore({
   reducer: combineReducers({
     messages: messageReducer,
     user: userReducer,
-    socket: socketReducer
+    socket: socketReducer,
+    error: errorReducer
   }),
   middleware: middleware,
 })

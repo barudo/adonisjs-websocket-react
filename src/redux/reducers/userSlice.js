@@ -17,11 +17,11 @@ const sliceConfig = createSlice({
     setUser(state, { payload }) {
       state.user = payload
     },
-    setToken(state, (payload)) {
+    setToken(state, {payload}) {
       state.jwtToken = payload
     }
   },
 })
 
-export const { setUser } = sliceConfig.actions
+export const { setUser, setToken } = sliceConfig.actions
 export default sliceConfig.reducer
