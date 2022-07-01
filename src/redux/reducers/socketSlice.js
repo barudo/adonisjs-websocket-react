@@ -1,9 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit'
 
 const initialState = {
-  //just random user for now
   socket: null,
-  subscriptions: {},
   topics: [],
   activeTopic: null,
 }
@@ -15,9 +13,8 @@ const sliceConfig = createSlice({
     setSocket(state, { payload }) {
       state.socket = payload
     },
-    addSubscription(state, { payload }) {
-      state.subscriptions = { ...state.subscriptions, [payload.topic]: payload.subscription }
-      state.topics = [...state.topics, payload.topic]
+    addTopic(state, { payload }) {
+      state.topics = [...state.topics, payload]
     },
     setActiveTopic(state, { payload }) {
       state.activeTopic = payload
@@ -25,5 +22,5 @@ const sliceConfig = createSlice({
   },
 })
 
-export const { setSocket, addSubscription, setActiveTopic } = sliceConfig.actions
+export const { setSocket, addTopic, setActiveTopic } = sliceConfig.actions
 export default sliceConfig.reducer

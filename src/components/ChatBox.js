@@ -1,39 +1,48 @@
 import { useEffect, useState } from 'react'
 import { Container, Row, Col, Card, InputGroup, FormControl, Button } from 'react-bootstrap'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
+import { setCurrentQuestion } from '../redux/reducers/messageSlice'
+import socket from '../utils/socket'
 
 const ChatBox = ({ activeTopic }) => {
-  const { messages } = useSelector((store) => store?.messages)
-  const { subscriptions } = useSelector((store) => store?.socket)
+  const { messages, currentQuestion } = useSelector((store) => store?.messages)
   const [topicMessages, setTopicMessages] = useState([])
-  const [subscription, setSubscription] = useState({})
+  const [topicQuestion, setTopicQuestion] = useState(null)
+  const [currentMessage, setCurrentMessage] = useState('')
+  const dispatch = useDispatch()
+  const [topicCanCreateTask, setTopicCanCreateTask] = useState(false)
 
   useEffect(() => {
     setTopicMessages(messages[activeTopic])
-    setSubscription(subscriptions[activeTopic])
-  }, [activeTopic, messages, setTopicMessages, setSubscription, subscriptions])
+    setTopicQuestion(currentQuestion[activeTopic])
+    setTopicCanCreateTask(activeTopic.match(/^estate:[0-9]+$/))
+  }, [activeTopic, messages, setTopicMessages, currentQuestion, setTopicQuestion])
 
-  const sendMessage = (message) => {
-    console.log(subscription)
-    subscription.emit('message', { message, user: 'Justin' })
-    /*
-    if (currentQuestion) {
+  const sendMessage = () => {
+    const subscription = socket.ws.getSubscription(activeTopic)
+    if (topicQuestion) {
       //we answer if there is a current question...
-      console.log({ currentQuestion })
-      
-      setCurrentQuestion(false)
+      subscription.emit('answer', {
+        message: currentMessage,
+        question: topicQuestion,
+      })
+      dispatch(setCurrentQuestion({ topic: activeTopic, question: null }))
       setCurrentMessage('')
     } else {
-      subscription.emit('message', { message, user })
+      console.log({ currentMessage })
+      subscription.emit('message', { message: currentMessage })
       setCurrentMessage('')
-    }*/
+    }
   }
-  /*
+
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' && currentMessage) {
       sendMessage(currentMessage)
     }
-  }*/
+  }
+  const createTaskHandler = () => {
+    socket.ws.getSubscription(activeTopic).emit('createTask')
+  }
 
   return (
     <Container>
@@ -41,15 +50,26 @@ const ChatBox = ({ activeTopic }) => {
         <Col md="6">
           <Card>
             <Card.Header>Topic: {activeTopic}</Card.Header>
-            <Card.Body style={{ height: '400px' }} className="d-flex align-items-end">
+            <Card.Body style={{ height: '400px', width: '100%', overflow: 'scroll' }} className="">
               {topicMessages.map((message, index) => (
-                <div key={index}>{message}</div>
+                <p key={index}>{message}</p>
               ))}
             </Card.Body>
             <Card.Footer>
               <InputGroup className="mb-3">
-                <FormControl placeholder="Message" aria-label="message" />
-                <Button variant="success" onClick={sendMessage}>
+                <FormControl
+                  placeholder="Message"
+                  aria-label="message"
+                  value={currentMessage}
+                  onChange={(e) => setCurrentMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                {topicCanCreateTask && (
+                  <Button variant="warning" onClick={() => createTaskHandler()}>
+                    Create Task
+                  </Button>
+                )}
+                <Button variant="success" onClick={() => sendMessage()}>
                   Send
                 </Button>
               </InputGroup>

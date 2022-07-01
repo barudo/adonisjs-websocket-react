@@ -1,21 +1,24 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { addSubscription, setActiveTopic } from '../redux/reducers/socketSlice'
+import { addTopic, setActiveTopic } from '../redux/reducers/socketSlice'
 import {
   appendMessage,
   setCurrentQuestion,
   emptyTopicMessages,
+  emptyCurrentQuestion,
 } from '../redux/reducers/messageSlice'
 
 import { setError } from '../redux/reducers/errorSlice'
 import { isArray, trimEnd } from 'lodash'
 import { Container, Col, Row, Form, Button } from 'react-bootstrap'
+import socket from '../utils/socket'
 
 const Topics = () => {
-  const { socket, topics } = useSelector((store) => store?.socket)
+  const { topics } = useSelector((store) => store?.socket)
   const { user } = useSelector((store) => store?.user)
   const [upcomingTopic, setUpcomingTopic] = useState('')
   const dispatch = useDispatch()
+  const [taskTopic, setTaskTopic] = useState(null)
 
   const handleAddTopic = () => {
     if (!upcomingTopic) {
@@ -23,27 +26,42 @@ const Topics = () => {
       return
     }
     dispatch(setError(''))
-    dispatch(
-      addSubscription({
-        topic: upcomingTopic,
-        subscription: socket.subscribe(upcomingTopic, handleMessage, handleQuestion),
-      })
-    )
+    if (upcomingTopic.match(/^estate:[0-9]+$/)) {
+      socket.subscribe(
+        upcomingTopic,
+        handleMessage,
+        handleQuestion,
+        (error) => dispatch(setError(error)),
+        handleTaskCreated
+      )
+    } else {
+      socket.subscribe(upcomingTopic, handleMessage, handleQuestion, (error) =>
+        dispatch(setError(error))
+      )
+    }
+    dispatch(addTopic(upcomingTopic))
     dispatch(emptyTopicMessages({ topic: upcomingTopic }))
+    dispatch(emptyCurrentQuestion({ topic: upcomingTopic }))
     dispatch(setActiveTopic(upcomingTopic))
     setUpcomingTopic('')
   }
 
   const handleQuestion = (question) => {
-    console.log({ question })
+    const { message, sender } = question
     let choices
-    if (isArray(question)) {
-      question.forEach((q) => {
-        dispatch(appendMessage({ topic: upcomingTopic, message: `bot: ${q.question}` }))
-        if (question.type === 'not-a-question' || question.type === 'final') {
-          dispatch(setCurrentQuestion(false))
+    if (isArray(message)) {
+      message.forEach((q) => {
+        console.log({ q, sender })
+        dispatch(
+          appendMessage({
+            topic: upcomingTopic,
+            message: `${sender.firstname} ${sender.secondname}: ${q.question}`,
+          })
+        )
+        if (q.type === 'not-a-question' || q.type === 'final') {
+          dispatch(setCurrentQuestion({ topic_id: upcomingTopic, question: null }))
         } else {
-          dispatch(setCurrentQuestion(q))
+          dispatch(setCurrentQuestion({ topic_id: upcomingTopic, question: q }))
         }
         if (q.choices && q.choices.length > 0) {
           choices = q.choices.reduce((choices, current) => {
@@ -57,9 +75,9 @@ const Topics = () => {
     } else {
       dispatch(appendMessage({ topic: upcomingTopic, message: `bot: ${question.question}` }))
       if (question.type === 'not-a-question' || question.type === 'final') {
-        dispatch(setCurrentQuestion(false))
+        dispatch(setCurrentQuestion({ topic_id: upcomingTopic, question: null }))
       } else {
-        dispatch(setCurrentQuestion(question))
+        dispatch(setCurrentQuestion({ topic_id: upcomingTopic, question: question }))
       }
       if (question.choices && question.choices.length > 0) {
         choices = question.choices.reduce((choices, current) => {
@@ -67,16 +85,82 @@ const Topics = () => {
           return choices
         }, '')
         choices = trimEnd(choices, ',')
-        dispatch(dispatch(appendMessage(`choices: ${choices}`)))
+        dispatch(appendMessage(`choices: ${choices}`))
       }
     }
   }
 
-  const handleMessage = (message) => {
-    if (user === message.user) {
-      dispatch(appendMessage(`me: ${message.message}`))
+  const handleMessage = ({ message, sender }) => {
+    console.log({ message, sender })
+    if (user.id === sender.userId) {
+      dispatch(appendMessage({ topic: upcomingTopic, message: `me: ${message.message}` }))
     } else {
-      dispatch(appendMessage(`${message.user}: ${message.message}`))
+      dispatch(
+        appendMessage({
+          topic: upcomingTopic,
+          message: `${sender.firstname} ${sender.secondname}: ${message.message}`,
+        })
+      )
+    }
+  }
+
+  const handleTaskCreated = ({ message, sender }) => {
+    const { task_id } = message
+    const matches = upcomingTopic.match(/^estate:([0-9]+)$/)
+    const estate_id = matches[1]
+    setTaskTopic(`task:${estate_id}brz${task_id}`)
+    socket.subscribe(`task:${estate_id}brz${task_id}`, handleMessage, handleTaskQuestion, (error) =>
+      dispatch(setError(error))
+    )
+    dispatch(addTopic(`task:${estate_id}brz${task_id}`))
+    dispatch(emptyTopicMessages({ topic: `task:${estate_id}brz${task_id}` }))
+    dispatch(emptyCurrentQuestion({ topic: `task:${estate_id}brz${task_id}` }))
+    dispatch(setActiveTopic(`task:${estate_id}brz${task_id}`))
+    const subscription = socket.ws.getSubscription(`task:${estate_id}brz${task_id}`)
+    subscription.emit('taskInit')
+  }
+
+  const handleTaskQuestion = (question) => {
+    const { message, sender } = question
+    let choices
+    if (isArray(message)) {
+      message.forEach((q) => {
+        console.log({ q, sender })
+        dispatch(
+          appendMessage({
+            topic: taskTopic,
+            message: `${sender.firstname} ${sender.secondname}: ${q.question}`,
+          })
+        )
+        if (q.type === 'not-a-question' || q.type === 'final') {
+          dispatch(setCurrentQuestion({ topic_id: taskTopic, question: null }))
+        } else {
+          dispatch(setCurrentQuestion({ topic_id: taskTopic, question: q }))
+        }
+        if (q.choices && q.choices.length > 0) {
+          choices = q.choices.reduce((choices, current) => {
+            choices += `${current.choice},`
+            return choices
+          }, '')
+          choices = trimEnd(choices, ',')
+          dispatch(appendMessage({ topic: taskTopic, message: `choices: ${choices}` }))
+        }
+      })
+    } else {
+      dispatch(appendMessage({ topic: taskTopic, message: `bot: ${question.question}` }))
+      if (question.type === 'not-a-question' || question.type === 'final') {
+        dispatch(setCurrentQuestion({ topic_id: taskTopic, question: null }))
+      } else {
+        dispatch(setCurrentQuestion({ topic_id: taskTopic, question: question }))
+      }
+      if (question.choices && question.choices.length > 0) {
+        choices = question.choices.reduce((choices, current) => {
+          choices += `${current.choice},`
+          return choices
+        }, '')
+        choices = trimEnd(choices, ',')
+        dispatch(appendMessage(`choices: ${choices}`))
+      }
     }
   }
 

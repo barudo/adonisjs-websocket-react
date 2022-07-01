@@ -21,7 +21,11 @@ const sliceConfig = createSlice({
       }
     },
     setCurrentQuestion(state, { payload }) {
-      state.currentQuestion = payload
+      if (state.currentQuestion[payload.topic]) {
+        state.currentQuestion[payload.topic] = payload.question
+      } else {
+        state.currentQuestion = { ...state.currentQuestion, [payload.topic]: payload.question }
+      }
     },
     emptyTopicMessages(state, { payload }) {
       if (state.messages[payload.topic]) {
@@ -30,8 +34,16 @@ const sliceConfig = createSlice({
         state.messages = { ...state.messages, [payload.topic]: [] }
       }
     },
+    emptyCurrentQuestion(state, { payload }) {
+      if (state.currentQuestion[payload.topic]) {
+        state.currentQuestion[payload.topic] = null
+      } else {
+        state.currentQuestion = { ...state.currentQuestion, [payload.topic]: null }
+      }
+    },
   },
 })
 
-export const { appendMessage, setCurrentQuestion, emptyTopicMessages } = sliceConfig.actions
+export const { appendMessage, setCurrentQuestion, emptyTopicMessages, emptyCurrentQuestion } =
+  sliceConfig.actions
 export default sliceConfig.reducer
