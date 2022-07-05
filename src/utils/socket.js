@@ -35,7 +35,7 @@ export class SocketConnection {
       })
 
       result.on('error', (error) => {
-        errorCallback(error.message)
+        errorCallback(error)
       })
 
       result.on('taskCreated', (message) => {

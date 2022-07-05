@@ -16,11 +16,15 @@ const sliceConfig = createSlice({
     addTopic(state, { payload }) {
       state.topics = [...state.topics, payload]
     },
+    removeTopic(state, { payload }) {
+      const validTopics = state.topics.filter((topic) => topic !== payload)
+      state.topics = validTopics
+    },
     setActiveTopic(state, { payload }) {
       state.activeTopic = payload
     },
   },
 })
 
-export const { setSocket, addTopic, setActiveTopic } = sliceConfig.actions
+export const { setSocket, addTopic, removeTopic, setActiveTopic } = sliceConfig.actions
 export default sliceConfig.reducer

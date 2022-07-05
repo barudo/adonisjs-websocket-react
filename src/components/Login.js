@@ -24,6 +24,7 @@ const Login = () => {
           },
         })
         me = await me.json()
+        console.log(me.data)
         dispatch(setUser(me.data))
         dispatch(setError(''))
         socket.connect(jwtToken)

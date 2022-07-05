@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { addTopic, setActiveTopic } from '../redux/reducers/socketSlice'
+import { addTopic, setActiveTopic, removeTopic } from '../redux/reducers/socketSlice'
 import {
   appendMessage,
   setCurrentQuestion,
@@ -31,13 +31,22 @@ const Topics = () => {
         upcomingTopic,
         handleMessage,
         handleQuestion,
-        (error) => dispatch(setError(error)),
+        (error) => {
+          dispatch(setError(error))
+        },
         handleTaskCreated
       )
     } else {
-      socket.subscribe(upcomingTopic, handleMessage, handleQuestion, (error) =>
-        dispatch(setError(error))
-      )
+      socket.subscribe(upcomingTopic, handleMessage, handleQuestion, (error) => {
+        if (
+          error.message.match(/^110[0-9]+:/) ||
+          error.message === 'Topic cannot be handled by any channel'
+        ) {
+          dispatch(removeTopic(error.topic))
+          dispatch(setActiveTopic(null))
+        }
+        dispatch(setError(error.message))
+      })
     }
     dispatch(addTopic(upcomingTopic))
     dispatch(emptyTopicMessages({ topic: upcomingTopic }))
@@ -109,8 +118,13 @@ const Topics = () => {
     const matches = upcomingTopic.match(/^estate:([0-9]+)$/)
     const estate_id = matches[1]
     setTaskTopic(`task:${estate_id}brz${task_id}`)
-    socket.subscribe(`task:${estate_id}brz${task_id}`, handleMessage, handleTaskQuestion, (error) =>
-      dispatch(setError(error))
+    socket.subscribe(
+      `task:${estate_id}brz${task_id}`,
+      handleMessage,
+      handleTaskQuestion,
+      (error) => {
+        dispatch(setError(error))
+      }
     )
     dispatch(addTopic(`task:${estate_id}brz${task_id}`))
     dispatch(emptyTopicMessages({ topic: `task:${estate_id}brz${task_id}` }))
