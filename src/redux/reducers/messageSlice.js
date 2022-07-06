@@ -20,6 +20,13 @@ const sliceConfig = createSlice({
         state.messages = { ...state.messages, [payload.topic]: [payload.message] }
       }
     },
+    prependMessage(state, { payload }) {
+      if (state.messages[payload.topic]) {
+        state.messages[payload.topic] = [payload.message, ...state.messages[payload.topic]]
+      } else {
+        state.messages = { ...state.messages, [payload.topic]: [payload.message] }
+      }
+    },
     setCurrentQuestion(state, { payload }) {
       if (state.currentQuestion[payload.topic]) {
         state.currentQuestion[payload.topic] = payload.question
@@ -44,6 +51,11 @@ const sliceConfig = createSlice({
   },
 })
 
-export const { appendMessage, setCurrentQuestion, emptyTopicMessages, emptyCurrentQuestion } =
-  sliceConfig.actions
+export const {
+  appendMessage,
+  prependMessage,
+  setCurrentQuestion,
+  emptyTopicMessages,
+  emptyCurrentQuestion,
+} = sliceConfig.actions
 export default sliceConfig.reducer

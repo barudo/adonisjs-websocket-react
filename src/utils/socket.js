@@ -1,4 +1,5 @@
 import Ws from '@adonisjs/websocket-client'
+
 export class SocketConnection {
   connect(token) {
     this.token = token
@@ -13,33 +14,43 @@ export class SocketConnection {
     })
     return this
   }
-  //this should be an object...
-  subscribe(
-    channel,
-    messageHandler,
-    questionHandler,
-    errorCallback,
-    taskCreatedHandler = () => {}
-  ) {
+
+  subscribe(channel, callbacks) {
     if (!this.ws) {
       console.log('You need to connect first before you subscribe.')
     } else {
       const result = this.ws.withJwtToken(this.token).subscribe(channel)
-
-      result.on('message', (message) => {
-        messageHandler(message)
+      //not used for now...
+      result.on('question', (question) => {
+        if (callbacks.handleQuestion) {
+          callbacks.handleQuestion(question)
+        }
+      })
+      //not used for now...
+      result.on('taskCreated', (message) => {
+        if (callbacks.handleTaskCreated) {
+          callbacks.handleTaskCreated(message)
+        }
       })
 
-      result.on('question', (question) => {
-        questionHandler(question)
+      result.on('message', (message) => {
+        if (callbacks.handleMessage) {
+          callbacks.handleMessage(message)
+        }
       })
 
       result.on('error', (error) => {
-        errorCallback(error)
+        if (callbacks.handleError) {
+          callbacks.handleError(error)
+        } else {
+          console.log(error)
+        }
       })
 
-      result.on('taskCreated', (message) => {
-        taskCreatedHandler(message)
+      result.on('previousMessages', (message) => {
+        if (callbacks.handlePreviousMessages) {
+          callbacks.handlePreviousMessages(message)
+        }
       })
 
       return result

@@ -6,6 +6,7 @@ import {
   setCurrentQuestion,
   emptyTopicMessages,
   emptyCurrentQuestion,
+  prependMessage,
 } from '../redux/reducers/messageSlice'
 
 import { setError } from '../redux/reducers/errorSlice'
@@ -14,11 +15,17 @@ import { Container, Col, Row, Form, Button } from 'react-bootstrap'
 import socket from '../utils/socket'
 
 const Topics = () => {
-  const { topics } = useSelector((store) => store?.socket)
+  const { topics, activeTopic } = useSelector((store) => store?.socket)
   const { user } = useSelector((store) => store?.user)
   const [upcomingTopic, setUpcomingTopic] = useState('')
   const dispatch = useDispatch()
   const [taskTopic, setTaskTopic] = useState(null)
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' && upcomingTopic) {
+      handleAddTopic()
+    }
+  }
 
   const handleAddTopic = () => {
     if (!upcomingTopic) {
@@ -27,26 +34,32 @@ const Topics = () => {
     }
     dispatch(setError(''))
     if (upcomingTopic.match(/^estate:[0-9]+$/)) {
-      socket.subscribe(
-        upcomingTopic,
+      socket.subscribe(upcomingTopic, {
         handleMessage,
         handleQuestion,
-        (error) => {
+        handleError: (error) => {
           dispatch(setError(error))
         },
-        handleTaskCreated
-      )
-    } else {
-      socket.subscribe(upcomingTopic, handleMessage, handleQuestion, (error) => {
-        if (
-          error.message.match(/^110[0-9]+:/) ||
-          error.message === 'Topic cannot be handled by any channel'
-        ) {
-          dispatch(removeTopic(error.topic))
-          dispatch(setActiveTopic(null))
-        }
-        dispatch(setError(error.message))
+        handleTaskCreated,
       })
+    } else {
+      //this is a task
+      socket.subscribe(upcomingTopic, {
+        handleMessage,
+        handleQuestion,
+        handleError: (error) => {
+          if (
+            error.message.match(/^110[0-9]+:/) ||
+            error.message === 'Topic cannot be handled by any channel'
+          ) {
+            dispatch(removeTopic(error.topic))
+            dispatch(setActiveTopic(null))
+          }
+          dispatch(setError(error.message))
+        },
+        handlePreviousMessages,
+      })
+      socket.ws.getSubscription(upcomingTopic).emit('getPreviousMessages')
     }
     dispatch(addTopic(upcomingTopic))
     dispatch(emptyTopicMessages({ topic: upcomingTopic }))
@@ -55,6 +68,16 @@ const Topics = () => {
     setUpcomingTopic('')
   }
 
+  const handlePreviousMessages = ({ messages, topic }) => {
+    messages.map((message, index) => {
+      return dispatch(
+        prependMessage({
+          topic,
+          message,
+        })
+      )
+    })
+  }
   const handleQuestion = (question) => {
     const { message, sender } = question
     let choices
@@ -99,18 +122,8 @@ const Topics = () => {
     }
   }
 
-  const handleMessage = ({ message, sender }) => {
-    console.log({ message, sender })
-    if (user.id === sender.userId) {
-      dispatch(appendMessage({ topic: upcomingTopic, message: `me: ${message.message}` }))
-    } else {
-      dispatch(
-        appendMessage({
-          topic: upcomingTopic,
-          message: `${sender.firstname} ${sender.secondname}: ${message.message}`,
-        })
-      )
-    }
+  const handleMessage = ({ message }) => {
+    dispatch(appendMessage({ topic: upcomingTopic, message }))
   }
 
   const handleTaskCreated = ({ message, sender }) => {
@@ -177,18 +190,23 @@ const Topics = () => {
       }
     }
   }
-
+  const topicClickHandler = (topic) => {
+    //we mark the last item that reached the chatbox as the last read
+    socket.ws.getSubscription(activeTopic).emit('markLastRead')
+    dispatch(setActiveTopic(topic))
+  }
   return (
     <Container className="mt-3">
       <Row>
         <Col md={12}>
           <Form onSubmit={(e) => e.preventDefault()}>
             <Form.Group>
-              <Form.Label>Topic (ie chat:abscbd)</Form.Label>
+              <Form.Label>Topic (ie task:123brz321)</Form.Label>
               <Form.Control
                 type="text"
                 value={upcomingTopic}
                 onChange={(e) => setUpcomingTopic(e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e)}
               />
             </Form.Group>
             <Button variant="success" className="mt-3" onClick={() => handleAddTopic()}>
@@ -204,7 +222,7 @@ const Topics = () => {
                 return (
                   <Button
                     key={topic}
-                    onClick={() => dispatch(setActiveTopic(topic))}
+                    onClick={() => topicClickHandler(topic)}
                     variant="warning"
                     size="sm"
                     className="me-2"

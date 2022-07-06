@@ -6,6 +6,7 @@ import socket from '../utils/socket'
 
 const ChatBox = ({ activeTopic }) => {
   const { messages, currentQuestion } = useSelector((store) => store?.messages)
+  const { user } = useSelector((store) => store?.user)
   const [topicMessages, setTopicMessages] = useState([])
   const [topicQuestion, setTopicQuestion] = useState(null)
   const [currentMessage, setCurrentMessage] = useState('')
@@ -40,8 +41,18 @@ const ChatBox = ({ activeTopic }) => {
       sendMessage(currentMessage)
     }
   }
+  //not used...
   const createTaskHandler = () => {
     socket.ws.getSubscription(activeTopic).emit('createTask')
+  }
+
+  //simulates scrolls... hook getPreviousMessages
+  const handleScroll = (event) => {
+    if (event.currentTarget.scrollTop === 0) {
+      socket.ws
+        .getSubscription(activeTopic)
+        .emit('getPreviousMessages', { lastId: topicMessages[0].id })
+    }
   }
 
   return (
@@ -50,9 +61,18 @@ const ChatBox = ({ activeTopic }) => {
         <Col md="6">
           <Card>
             <Card.Header>Topic: {activeTopic}</Card.Header>
-            <Card.Body style={{ height: '400px', width: '100%', overflow: 'scroll' }} className="">
+            <Card.Body
+              style={{ height: '400px', width: '100%', overflow: 'scroll' }}
+              onScroll={handleScroll}
+              className=""
+            >
               {topicMessages.map((message, index) => (
-                <p key={index}>{message}</p>
+                <p key={index}>
+                  {user.id === message.sender.id
+                    ? `me: `
+                    : `${message.sender.firstname} ${message.sender.secondname}: `}
+                  {message.message}
+                </p>
               ))}
             </Card.Body>
             <Card.Footer>
