@@ -53,6 +53,17 @@ export class SocketConnection {
         }
       })
 
+      result.on('messageEdited', ({ id, message, attachments }) => {
+        if (callbacks.handleMessageEdited) {
+          callbacks.handleMessageEdited({ id, message, attachments })
+        }
+      })
+
+      result.on('messageRemoved', (message) => {
+        if (callbacks.handleMessageRemoved) {
+          callbacks.handleMessageRemoved(message)
+        }
+      })
       return result
     }
   }

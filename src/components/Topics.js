@@ -1,22 +1,24 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { addTopic, setActiveTopic, removeTopic } from '../redux/reducers/socketSlice'
 import {
   appendMessage,
-  setCurrentQuestion,
-  emptyTopicMessages,
   emptyCurrentQuestion,
+  emptyTopicMessages,
   prependMessage,
+  removeMessage,
+  setCurrentQuestion,
+  updateMessage,
 } from '../redux/reducers/messageSlice'
+import { addTopic, removeTopic, setActiveTopic } from '../redux/reducers/socketSlice'
 
-import { setError } from '../redux/reducers/errorSlice'
 import { isArray, trimEnd } from 'lodash'
-import { Container, Col, Row, Form, Button } from 'react-bootstrap'
+import { Button, Col, Container, Form, Row } from 'react-bootstrap'
+import { setError } from '../redux/reducers/errorSlice'
 import socket from '../utils/socket'
 
 const Topics = () => {
   const { topics, activeTopic } = useSelector((store) => store?.socket)
-  const { user } = useSelector((store) => store?.user)
+  //const { user } = useSelector((store) => store?.user)
   const [upcomingTopic, setUpcomingTopic] = useState('')
   const dispatch = useDispatch()
   const [taskTopic, setTaskTopic] = useState(null)
@@ -27,12 +29,23 @@ const Topics = () => {
     }
   }
 
+  const handleMessageEdited = ({ id, message, attachments }) => {
+    console.log({ id, message, attachments })
+    dispatch(updateMessage({ topic: upcomingTopic, message, attachments, id }))
+  }
+
+  const handleMessageRemoved = ({ id }) => {
+    dispatch(removeMessage({ topic: upcomingTopic, id }))
+  }
+
   const handleAddTopic = () => {
     if (!upcomingTopic) {
       dispatch(setError('Topic must NOT be empty.'))
       return
     }
     dispatch(setError(''))
+    //the socket.subscribe here is just for illustration purpose, ie on how to subscribe to topic.
+    //this should be done after knowing which "topics" the app should connect to.
     if (upcomingTopic.match(/^estate:[0-9]+$/)) {
       socket.subscribe(upcomingTopic, {
         handleMessage,
@@ -41,6 +54,8 @@ const Topics = () => {
           dispatch(setError(error))
         },
         handleTaskCreated,
+        handleMessageEdited,
+        handleMessageRemoved,
       })
     } else {
       //this is a task
@@ -58,12 +73,19 @@ const Topics = () => {
           dispatch(setError(error.message))
         },
         handlePreviousMessages,
+        handleMessageEdited,
+        handleMessageRemoved,
       })
+      //getPreviousMessages should be done after subscribing. So we'll have the messages
+      //saved at the redux store
       socket.ws.getSubscription(upcomingTopic).emit('getPreviousMessages')
     }
     dispatch(addTopic(upcomingTopic))
     dispatch(emptyTopicMessages({ topic: upcomingTopic }))
     dispatch(emptyCurrentQuestion({ topic: upcomingTopic }))
+    //markLastRead should only be called when OPENING and CLOSING the chatbox for this topic
+    //we're opening the chatbox with setActiveTopic.. so hence the call
+    socket.ws.getSubscription(upcomingTopic).emit('markLastRead')
     dispatch(setActiveTopic(upcomingTopic))
     setUpcomingTopic('')
   }
@@ -78,6 +100,7 @@ const Topics = () => {
       )
     })
   }
+
   const handleQuestion = (question) => {
     const { message, sender } = question
     let choices

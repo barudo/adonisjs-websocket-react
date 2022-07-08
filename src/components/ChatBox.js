@@ -55,6 +55,21 @@ const ChatBox = ({ activeTopic }) => {
     }
   }
 
+  const messageDoubleClickHandler = (id) => {
+    socket.ws.getSubscription(activeTopic).emit('editMessage', {
+      message: 'this is an edit message',
+      attachments: ['https://url.com'],
+      id,
+    })
+  }
+
+  const removeMessageHandler = (id) => {
+    //should verify first
+    socket.ws.getSubscription(activeTopic).emit('removeMessage', {
+      id,
+    })
+  }
+
   return (
     <Container>
       <Row className="justify-content-md-center">
@@ -67,11 +82,19 @@ const ChatBox = ({ activeTopic }) => {
               className=""
             >
               {topicMessages.map((message, index) => (
-                <p key={index}>
+                <p key={index} onDoubleClick={() => messageDoubleClickHandler(message.id)}>
                   {user.id === message.sender.id
                     ? `me: `
                     : `${message.sender.firstname} ${message.sender.secondname}: `}
                   {message.message}
+                  {message.sender.id === user.id && (
+                    <span
+                      style={{ float: 'right' }}
+                      onClick={() => removeMessageHandler(message.id)}
+                    >
+                      x
+                    </span>
+                  )}
                 </p>
               ))}
             </Card.Body>
