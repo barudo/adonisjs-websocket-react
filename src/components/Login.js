@@ -26,7 +26,7 @@ const Login = () => {
         me = await me.json()
         dispatch(setUser(me.data))
         dispatch(setError(''))
-        socket.connect(jwtToken)
+        socket.connect(jwtToken, server)
         dispatch(setToken(jwtToken))
       } catch (err) {
         dispatch(setError(`error found ${err}`))

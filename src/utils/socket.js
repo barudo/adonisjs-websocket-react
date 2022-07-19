@@ -1,10 +1,10 @@
 import Ws from '@adonisjs/websocket-client'
 
 export class SocketConnection {
-  connect(token) {
+  connect(token, server) {
     this.token = token
-    this.ws = Ws('ws://localhost:3000/').withJwtToken(token).connect()
-
+    server = server.replace(/^http[s]?:\/\//, '').replace(/\/?$/, '')
+    this.ws = Ws(`ws://${server}/`).withJwtToken(token).connect()
     this.ws.on('open', () => {
       console.log('Connection initialized')
     })
