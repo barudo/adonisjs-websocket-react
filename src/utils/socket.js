@@ -3,8 +3,9 @@ import Ws from '@adonisjs/websocket-client'
 export class SocketConnection {
   connect(token, server) {
     this.token = token
+    const protocol = server.match(/^https/) ? 'wss' : 'ws'
     server = server.replace(/^http[s]?:\/\//, '').replace(/\/?$/, '')
-    this.ws = Ws(`ws://${server}/`).withJwtToken(token).connect()
+    this.ws = Ws(`${protocol}://${server}/`).withJwtToken(token).connect()
     this.ws.on('open', () => {
       console.log('Connection initialized')
     })
